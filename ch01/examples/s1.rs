@@ -12,7 +12,7 @@ trait Duck {
         println!("display");
     }
     fn perform_fly(&self) {
-        // self.get_fly_behavior.fly()
+        // self.get_fly_behavior.fly() // try
         println!("perform fly");
     }
 }
@@ -52,7 +52,7 @@ impl Duck for MallardDuck {
     fn display(&self) {
         println!("display like a MallardDuck");
     }
-    // cannot do
+    // try
     // fn get_fly_behavior(&self) -> impl Fly {
     //     self.fly_behavior
     // }

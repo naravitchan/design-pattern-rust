@@ -25,6 +25,12 @@ impl Fly for FlyWithWings {
         println!("fly");
     }
 }
+struct FlyRocketPowered {}
+impl Fly for FlyRocketPowered {
+    fn fly(&self) {
+        println!("fly with a rocket!");
+    }
+}
 
 struct FlyNoWay {}
 impl Fly for FlyNoWay {
@@ -43,6 +49,10 @@ impl MallardDuck {
             name,
             fly_behavior: Box::new(FlyWithWings {}),
         }
+    }
+    fn set_fly_behavior(&mut self, a: Box<dyn Fly>) {
+        // self.get_fly_behavior.fly() // try
+        self.fly_behavior = a;
     }
 }
 impl Duck for MallardDuck {
@@ -108,19 +118,57 @@ impl Duck for RubberDuck {
     fn perform_fly(&self) {
         self.fly_behavior.fly();
     }
+    fn quack(&self) {
+        println!("{} say quackkkk!", self.name());
+    }
+}
+
+struct DecoyDuck {
+    name: &'static str,
+    fly_behavior: Box<dyn Fly>,
+}
+
+impl DecoyDuck {
+    fn new(name: &'static str) -> Self {
+        Self {
+            name,
+            fly_behavior: Box::new(FlyNoWay {}),
+        }
+    }
+}
+impl Duck for DecoyDuck {
+    fn name(&self) -> &'static str {
+        self.name
+    }
+    fn display(&self) {
+        println!("display like a DecoyDuck");
+    }
+    fn perform_fly(&self) {
+        self.fly_behavior.fly();
+    }
+    fn quack(&self) {
+        println!("{} say nothing!", self.name());
+    }
 }
 
 fn main() {
     println!("Hello, main world!");
-    let d1 = MallardDuck::new("d1");
-    let d2 = RedHeadDuck::new("d2");
-    let d3 = RubberDuck::new("d3");
+
+    let mut d1 = MallardDuck::new("d1");
+    // add set behavior
+    d1.set_fly_behavior(Box::new(FlyRocketPowered {}));
     d1.display();
     d1.quack();
     d1.perform_fly();
+    let d2 = RedHeadDuck::new("d2");
     d2.display();
     d2.quack();
     d2.perform_fly();
+    let d3 = RubberDuck::new("d3");
+    d3.display();
+    d3.quack();
+    d3.perform_fly();
+    let d3 = DecoyDuck::new("d4");
     d3.display();
     d3.quack();
     d3.perform_fly();

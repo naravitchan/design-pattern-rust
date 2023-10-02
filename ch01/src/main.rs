@@ -53,6 +53,10 @@ impl Duck for RubberDuck {
     fn display(&self) {
         println!("display like a RubberDuck");
     }
+
+    fn quack(&self) {
+        println!("{} say quackkkk!", self.name());
+    }
 }
 
 fn main() {
@@ -63,9 +67,11 @@ fn main() {
     d1.display();
     d1.quack();
     d1.fly();
+
     d2.display();
     d2.quack();
     d2.fly();
+
     d3.display();
     d3.quack();
     d3.fly();

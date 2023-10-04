@@ -1,102 +1,168 @@
-use std::borrow::BorrowMut;
-use std::cell::RefCell;
-use std::rc::Rc;
-// use std::rc::Weak;
-// use std::sync::Arc;
+use core::cell::RefCell;
+use std::{cell::Ref, rc::Rc};
 
-trait ObserverTrait {
-    fn update(&mut self, temp: i32, humid: i32, pressure: i32);
+trait Observer {
+    fn update(&mut self, temperature: f64, humidity: f64, pressure: f64);
 }
 
-trait DisplayTrait {
+trait DisplayElement {
     fn display(&self);
 }
 
 trait Subject {
-    fn registerObserver(&mut self, o: Rc<RefCell<dyn ObserverTrait>>);
-    fn removeObserver(&mut self);
-    fn notifyObservers(&self);
+    fn register_observer(&mut self, o: Rc<RefCell<dyn Observer>>);
+    fn remove_observer(&mut self, o: Rc<RefCell<dyn Observer>>);
+    fn notify_observers(&self);
 }
 
 struct WeatherData {
-    observer: Vec<Rc<RefCell<dyn ObserverTrait>>>,
-    temp: i32,
-    humid: i32,
-    pressure: i32,
-}
-
-impl Subject for WeatherData {
-    fn registerObserver(&mut self, o: Rc<RefCell<dyn ObserverTrait>>) {
-        self.observer.push(o)
-    }
-    fn removeObserver(&mut self) {
-        let _ = self.observer.pop();
-    }
-    fn notifyObservers(&self) {
-        for o in &self.observer {
-            o.try_borrow_mut()
-                .unwrap()
-                .update(self.temp, self.humid, self.pressure);
-        }
-    }
+    observers: Vec<Rc<RefCell<dyn Observer>>>,
+    temperature: f64,
+    humidity: f64,
+    pressure: f64,
 }
 
 impl WeatherData {
     fn new() -> Self {
-        Self {
-            observer: vec![],
-            temp: 0,
-            humid: 0,
-            pressure: 0,
+        WeatherData {
+            observers: Vec::new(),
+            temperature: 0.0,
+            humidity: 0.0,
+            pressure: 0.0,
         }
     }
-    fn set_measurements(&mut self, temp: i32, humid: i32, pressure: i32) {
-        self.temp = temp;
-        self.humid = humid;
+
+    fn set_measurements(&mut self, temperature: f64, humidity: f64, pressure: f64) {
+        self.temperature = temperature;
+        self.humidity = humidity;
         self.pressure = pressure;
         self.measurements_changed();
     }
+
     fn measurements_changed(&self) {
-        self.notifyObservers();
+        self.notify_observers();
+    }
+}
+
+impl Subject for WeatherData {
+    fn register_observer(&mut self, o: Rc<RefCell<dyn Observer>>) {
+        self.observers.push(o);
+    }
+    fn remove_observer(&mut self, o: Rc<RefCell<dyn Observer>>) {
+        if let Some(idx) = self.observers.iter().position(|x| Rc::ptr_eq(x, &o)) {
+            self.observers.remove(idx);
+        }
+    }
+
+    fn notify_observers(&self) {
+        for observer in self.observers.iter() {
+            observer.try_borrow_mut().unwrap().update(
+                self.temperature,
+                self.humidity,
+                self.pressure,
+            );
+        }
     }
 }
 
 struct CurrentConditionsDisplay {
-    temp: i32,
-    humid: i32,
-    // weather_data: WeatherData,
+    temperature: f64,
+    humidity: f64,
+    weather_data: Rc<RefCell<WeatherData>>,
 }
-impl DisplayTrait for CurrentConditionsDisplay {
-    fn display(&self) {
-        println!("Current conditions {} {}", self.temp, self.humid);
-    }
-}
-impl ObserverTrait for CurrentConditionsDisplay {
-    fn update(&mut self, temp: i32, humid: i32, _pressure: i32) {
-        self.temp = temp;
-        self.humid = humid;
-        self.display()
-    }
-}
-impl CurrentConditionsDisplay {
-    fn new() -> Self {
-        Self {
-            temp: 0,
-            humid: 0,
-            // weather_data: weather_data,
-        }
-    }
-}
-fn main() {
-    println!("Hello, world!");
-    let mut weather_data = WeatherData::new();
-    let d1: CurrentConditionsDisplay = CurrentConditionsDisplay::new();
 
-    // let c = RefCell::new(d1);
-    // // https://doc.rust-lang.org/std/rc/struct.Weak.html
-    // let strong = Rc::new(c);
-    // let weak_d1 = Rc::downgrade(&strong);
-    let d1_rc = Rc::new(RefCell::new(d1));
-    weather_data.registerObserver(d1_rc);
-    weather_data.set_measurements(10, 20, 30);
+impl CurrentConditionsDisplay {
+    fn new(weather_data: Rc<RefCell<WeatherData>>) -> Rc<RefCell<Self>> {
+        let display = CurrentConditionsDisplay {
+            temperature: 0.0,
+            humidity: 0.0,
+            weather_data: weather_data.clone(),
+        };
+        let data = Rc::new(RefCell::new(display));
+        weather_data
+            .try_borrow_mut()
+            .unwrap()
+            .register_observer(data.clone());
+        data
+    }
+}
+impl DisplayElement for CurrentConditionsDisplay {
+    fn display(&self) {
+        println!(
+            "Current conditions: {} F degrees and  {} % humidity",
+            self.temperature, self.humidity
+        )
+    }
+}
+
+impl Observer for CurrentConditionsDisplay {
+    fn update(&mut self, temperature: f64, humidity: f64, pressure: f64) {
+        self.temperature = temperature;
+        self.humidity = humidity;
+        self.display();
+    }
+}
+
+struct StatisticsDisplay {
+    temperature: f64,
+    pressure: f64,
+    weather_data: Rc<RefCell<WeatherData>>,
+}
+
+impl StatisticsDisplay {
+    fn new(weather_data: Rc<RefCell<WeatherData>>) -> Rc<RefCell<Self>> {
+        let display = StatisticsDisplay {
+            temperature: 0.0,
+            pressure: 0.0,
+            weather_data: weather_data.clone(),
+        };
+        let data = Rc::new(RefCell::new(display));
+        weather_data
+            .try_borrow_mut()
+            .unwrap()
+            .register_observer(data.clone());
+        data
+    }
+}
+impl DisplayElement for StatisticsDisplay {
+    fn display(&self) {
+        println!(
+            "Static: {} F degrees and  {} pressure",
+            self.temperature, self.pressure
+        )
+    }
+}
+
+impl Observer for StatisticsDisplay {
+    fn update(&mut self, temperature: f64, humidity: f64, pressure: f64) {
+        self.temperature = temperature;
+        self.pressure = pressure;
+        self.display();
+    }
+}
+
+fn main() {
+    let weather_data = WeatherData::new();
+    let weather_data = Rc::new(RefCell::new(weather_data));
+    let current_conditions_display = CurrentConditionsDisplay::new(weather_data.clone());
+    let static_display = StatisticsDisplay::new(weather_data.clone());
+
+    weather_data
+        .try_borrow_mut()
+        .unwrap()
+        .set_measurements(80.0, 65.0, 30.4);
+    weather_data
+        .try_borrow_mut()
+        .unwrap()
+        .set_measurements(82.0, 70.0, 29.2);
+
+    weather_data
+        .try_borrow_mut()
+        .unwrap()
+        .remove_observer(static_display);
+
+    weather_data
+        .try_borrow_mut()
+        .unwrap()
+        .set_measurements(78.0, 90.0, 29.2);
 }

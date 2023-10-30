@@ -150,6 +150,7 @@ fn execute(application: GumballApplication, button: &str) -> GumballApplication 
     };
     GumballApplication { machine, state }
 }
+
 fn main() {
     let mut application = GumballApplication::new(2);
     application.insert_quarter();

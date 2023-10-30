@@ -145,6 +145,7 @@ fn execute(application: GumballApplication, button: &str) -> GumballApplication 
     };
     GumballApplication { machine, state }
 }
+
 fn main() {
     // let mut gumball_machine = GumballMachine::new(2);
     let application = GumballApplication::new(2);
